@@ -1,0 +1,244 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "virtualMachineScaleSets_wordpresserver_name": {
+            "defaultValue": "wordpresserver",
+            "type": "String"
+        },
+        "networkSecurityGroups_wordpresserver_nsg_externalid": {
+            "defaultValue": "/subscriptions/d71d6bdf-4185-4f8d-a7ff-e6e30757ee4c/resourceGroups/WORDPRESS/providers/Microsoft.Network/networkSecurityGroups/wordpresserver-nsg",
+            "type": "String"
+        },
+        "virtualNetworks_WORDPRESS_vnet_externalid": {
+            "defaultValue": "/subscriptions/d71d6bdf-4185-4f8d-a7ff-e6e30757ee4c/resourceGroups/WORDPRESS/providers/Microsoft.Network/virtualNetworks/WORDPRESS-vnet",
+            "type": "String"
+        },
+        "loadBalancers_Webserver_externalid": {
+            "defaultValue": "/subscriptions/d71d6bdf-4185-4f8d-a7ff-e6e30757ee4c/resourceGroups/ApacheServer/providers/Microsoft.Network/loadBalancers/Webserver",
+            "type": "String"
+        },
+        "disks_wordpresserver_wordpresserver_0_OsDisk_1_e799655f44f04729bcd1b235bc536f14_externalid": {
+            "defaultValue": "/subscriptions/d71d6bdf-4185-4f8d-a7ff-e6e30757ee4c/resourceGroups/WORDPRESS/providers/Microsoft.Compute/disks/wordpresserver_wordpresserver_0_OsDisk_1_e799655f44f04729bcd1b235bc536f14",
+            "type": "String"
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "type": "Microsoft.Compute/virtualMachineScaleSets",
+            "apiVersion": "2019-07-01",
+            "name": "[parameters('virtualMachineScaleSets_wordpresserver_name')]",
+            "location": "eastus",
+            "sku": {
+                "name": "Standard_D1_v2",
+                "tier": "Standard",
+                "capacity": 1
+            },
+            "plan": {
+                "name": "4-4",
+                "product": "wordpress",
+                "publisher": "bitnami"
+            },
+            "properties": {
+                "singlePlacementGroup": true,
+                "upgradePolicy": {
+                    "mode": "Automatic"
+                },
+                "scaleInPolicy": {
+                    "rules": [
+                        "Default"
+                    ]
+                },
+                "virtualMachineProfile": {
+                    "osProfile": {
+                        "computerNamePrefix": "wordpress",
+                        "adminUsername": "azureserver",
+                        "linuxConfiguration": {
+                            "disablePasswordAuthentication": false,
+                            "provisionVMAgent": true
+                        },
+                        "secrets": []
+                    },
+                    "storageProfile": {
+                        "osDisk": {
+                            "osType": "Linux",
+                            "createOption": "FromImage",
+                            "caching": "ReadWrite",
+                            "managedDisk": {
+                                "storageAccountType": "Standard_LRS"
+                            },
+                            "diskSizeGB": 30
+                        },
+                        "imageReference": {
+                            "publisher": "bitnami",
+                            "offer": "wordpress",
+                            "sku": "4-4",
+                            "version": "latest"
+                        }
+                    },
+                    "networkProfile": {
+                        "networkInterfaceConfigurations": [
+                            {
+                                "name": "WORDPRESS-vnet-nic01",
+                                "properties": {
+                                    "primary": true,
+                                    "enableAcceleratedNetworking": false,
+                                    "networkSecurityGroup": {
+                                        "id": "[parameters('networkSecurityGroups_wordpresserver_nsg_externalid')]"
+                                    },
+                                    "dnsSettings": {
+                                        "dnsServers": []
+                                    },
+                                    "enableIPForwarding": false,
+                                    "ipConfigurations": [
+                                        {
+                                            "name": "WORDPRESS-vnet-nic01-defaultIpConfiguration",
+                                            "properties": {
+                                                "publicIPAddressConfiguration": {
+                                                    "name": "publicIp-WORDPRESS-vnet-nic01",
+                                                    "properties": {
+                                                        "idleTimeoutInMinutes": 15,
+                                                        "ipTags": [],
+                                                        "publicIPAddressVersion": "IPv4"
+                                                    }
+                                                },
+                                                "primary": true,
+                                                "subnet": {
+                                                    "id": "[concat(parameters('virtualNetworks_WORDPRESS_vnet_externalid'), '/subnets/default')]"
+                                                },
+                                                "privateIPAddressVersion": "IPv4",
+                                                "loadBalancerBackendAddressPools": [
+                                                    {
+                                                        "id": "[concat(parameters('loadBalancers_Webserver_externalid'), '/backendAddressPools/Webserver')]"
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    },
+                    "diagnosticsProfile": {
+                        "bootDiagnostics": {
+                            "enabled": true
+                        }
+                    },
+                    "extensionProfile": {
+                        "extensions": []
+                    },
+                    "priority": "Regular"
+                },
+                "overprovision": true,
+                "doNotRunExtensionsOnOverprovisionedVMs": false,
+                "platformFaultDomainCount": 5
+            }
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachineScaleSets/virtualMachines",
+            "apiVersion": "2019-07-01",
+            "name": "[concat(parameters('virtualMachineScaleSets_wordpresserver_name'), '/0')]",
+            "location": "eastus",
+            "dependsOn": [
+                "[resourceId('Microsoft.Compute/virtualMachineScaleSets', parameters('virtualMachineScaleSets_wordpresserver_name'))]"
+            ],
+            "sku": {
+                "name": "Standard_D1_v2",
+                "tier": "Standard"
+            },
+            "plan": {
+                "name": "4-4",
+                "product": "wordpress",
+                "publisher": "bitnami"
+            },
+            "properties": {
+                "networkProfileConfiguration": {
+                    "networkInterfaceConfigurations": [
+                        {
+                            "name": "WORDPRESS-vnet-nic01",
+                            "properties": {
+                                "primary": true,
+                                "enableAcceleratedNetworking": false,
+                                "networkSecurityGroup": {
+                                    "id": "[parameters('networkSecurityGroups_wordpresserver_nsg_externalid')]"
+                                },
+                                "dnsSettings": {
+                                    "dnsServers": []
+                                },
+                                "enableIPForwarding": false,
+                                "ipConfigurations": [
+                                    {
+                                        "name": "WORDPRESS-vnet-nic01-defaultIpConfiguration",
+                                        "properties": {
+                                            "publicIPAddressConfiguration": {
+                                                "name": "publicIp-WORDPRESS-vnet-nic01",
+                                                "properties": {
+                                                    "idleTimeoutInMinutes": 15,
+                                                    "ipTags": [],
+                                                    "publicIPAddressVersion": "IPv4"
+                                                }
+                                            },
+                                            "primary": true,
+                                            "subnet": {
+                                                "id": "[concat(parameters('virtualNetworks_WORDPRESS_vnet_externalid'), '/subnets/default')]"
+                                            },
+                                            "privateIPAddressVersion": "IPv4",
+                                            "loadBalancerBackendAddressPools": [
+                                                {
+                                                    "id": "[concat(parameters('loadBalancers_Webserver_externalid'), '/backendAddressPools/Webserver')]"
+                                                }
+                                            ]
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                "hardwareProfile": {},
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "bitnami",
+                        "offer": "wordpress",
+                        "sku": "4-4",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "osType": "Linux",
+                        "name": "wordpresserver_wordpresserver_0_OsDisk_1_e799655f44f04729bcd1b235bc536f14",
+                        "createOption": "FromImage",
+                        "caching": "ReadWrite",
+                        "managedDisk": {
+                            "id": "[parameters('disks_wordpresserver_wordpresserver_0_OsDisk_1_e799655f44f04729bcd1b235bc536f14_externalid')]"
+                        }
+                    },
+                    "dataDisks": []
+                },
+                "osProfile": {
+                    "computerName": "wordpress000000",
+                    "adminUsername": "azureserver",
+                    "linuxConfiguration": {
+                        "disablePasswordAuthentication": false,
+                        "provisionVMAgent": true
+                    },
+                    "secrets": [],
+                    "allowExtensionOperations": true,
+                    "requireGuestProvisionSignal": true
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[concat(resourceId('Microsoft.Compute/virtualMachineScaleSets/virtualMachines', parameters('virtualMachineScaleSets_wordpresserver_name'), '0'), '/networkInterfaces/WORDPRESS-vnet-nic01')]"
+                        }
+                    ]
+                },
+                "diagnosticsProfile": {
+                    "bootDiagnostics": {
+                        "enabled": true
+                    }
+                }
+            }
+        }
+    ]
+}
